@@ -6,19 +6,18 @@ module.exports = function(grunt) {
     pkg: grunt.file.readJSON('package.json'),
     meta: {
       banner: '/*!\n' +
-              ' * AngularFire is the officially supported AngularJS binding for Firebase. Firebase\n' +
-              ' * is a full backend so you don\'t need servers to build your Angular app. AngularFire\n' +
-              ' * provides you with the $firebase service which allows you to easily keep your $scope\n' +
-              ' * variables in sync with your Firebase backend.\n' +
+              ' * angular-jet is the officially supported AngularJS binding for Jet. angular-jet\n' +
+              ' * provides you with the $jet service which allows you to easily keep your $scope\n' +
+              ' * variables in sync with your Jet daemon / backend.\n' +
               ' *\n' +
-              ' * AngularFire 0.0.0\n' +
-              ' * https://github.com/firebase/angularfire/\n' +
+              ' * angular-jet 0.0.0\n' +
+              ' * https://github.com/lipp/angular-jet/\n' +
               ' * Date: <%= grunt.template.today("mm/dd/yyyy") %>\n' +
               ' * License: MIT\n' +
               ' */\n'
     },
 
-    // merge files from src/ into angularfire.js
+    // merge files from src/ into angular-jet.js
     concat: {
       app: {
         options: { banner: '<%= meta.banner %>' },
@@ -26,7 +25,7 @@ module.exports = function(grunt) {
           'src/module.js',
           'src/**/*.js'
         ],
-        dest: 'dist/angularfire.js'
+        dest: 'dist/angular-jet.js'
       }
     },
 
@@ -43,6 +42,13 @@ module.exports = function(grunt) {
       },
       bower_install: {
         command: 'bower install'
+      }
+    },
+
+    bgShell: {
+      jetd: {
+        cmd: 'node ./node_modules/node-jet/bin/jetd.js',
+        bg: true
       }
     },
 
@@ -143,7 +149,7 @@ module.exports = function(grunt) {
 
   // Single run tests
   grunt.registerTask('test', ['test:unit', 'test:e2e']);
-  grunt.registerTask('test:unit', ['karma:singlerun']);
+  grunt.registerTask('test:unit', ['bgShell:jetd', 'karma:singlerun']);
   grunt.registerTask('test:e2e', ['concat', 'connect:testserver', 'protractor:singlerun']);
   grunt.registerTask('test:manual', ['karma:manual']);
 
