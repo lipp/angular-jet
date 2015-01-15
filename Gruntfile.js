@@ -47,7 +47,7 @@ module.exports = function(grunt) {
 
     bgShell: {
       jetd: {
-        cmd: 'node ./node_modules/node-jet/bin/jetd.js',
+        cmd: 'tests/init_jet.sh',
         bg: true
       }
     },
