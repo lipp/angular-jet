@@ -54,6 +54,7 @@
     "karma-spec-reporter": "0.0.13",
     "load-grunt-tasks": "~0.2.0",
     "node-jet": "^0.1.2",
-    "protractor": "^1.0.0"
+    "protractor": "^1.0.0",
+    "express": "~4.11.0"
   }
 }

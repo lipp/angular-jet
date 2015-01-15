@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html ng-app="todo">
+  <head>
+    <title>Angular Jet Todo e2e Test</title>
+
+    <!-- Angular -->
+    <script src="../../../bower_components/angular/angular.min.js"></script>
+
+    <!-- Firebase -->
+    <script src="../../../bower_components/jet/deploy/jet.js"></script>
+
+    <!-- AngularFire -->
+    <script src="../../../dist/angular-jet.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="todo.css">
+  </head>
+
+  <body ng-controller="TodoCtrl">
+    <div>
+
+      <!-- Add a random todo button -->
+      <button id="addRandomTodoButton" ng-click="addRandomTodo()">Add a Random Todo</button>
+
+    </div>
+
+    <!-- Add todo input -->
+    <form ng-submit="addTodo()">
+      <input placeholder="What needs to be done?" ng-model="newTodo" autofocus>
+    </form>
+
+    <!-- Todo list -->
+    <div id="todos">
+      <div class="todo" ng-cloak ng-repeat="todo in todos">
+        <input class="toggle" type="checkbox" ng-model="todo.completed" ng-change="todo.$save()" />
+        <input class="edit" ng-model="todo.title" ng-change="todo.$save()" />
+        <button class="removeTodoButton" ng-click="removeTodo(todo)">Remove</button>
+      </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="todo.js" defer></script>
+  </body>
+</html>

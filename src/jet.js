@@ -33,6 +33,10 @@
       });
     };
 
+    AngularPeer.prototype.$call = function(path, args) {
+      this._peer.call(path, args);
+    };
+
     // wait for states or methods to become available
     AngularPeer.prototype.$wait = function() {
       var defer = $q.defer();
@@ -83,16 +87,19 @@
         expr.sort.asArray = true;
         $fetcher = [];
         fetchCb = function(arr) {
-          for (var i = 0; i < arr.length; ++i) {
-            if (typeof arr[i].value === 'object') {
-              $fetcher[i] = arr[i].value;
+          arr.forEach(function(state, i) {
+            if (typeof state.value === 'object') {
+              $fetcher[i] = state.value;
             } else {
               $fetcher[i] = $fetcher[i] || {}
-              $fetcher[i].value = arr[i].value;
+              $fetcher[i].value = state.value;
             }
-            $fetcher[i].$index = arr[i].index;
-            $fetcher[i].$path = arr[i].path;
-          }
+            $fetcher[i].$index = state.index;
+            $fetcher[i].$path = state.path;
+            $fetcher[i].$save = function() {
+              peer.set(state.path, $fetcher[i]);
+            };
+          });
           debounceApply();
         };
       } else {
