@@ -1,4 +1,5 @@
 var protractor = require('protractor');
+var jet = require('node-jet');
 
 describe('Todo App', function () {
   // Reference to the todos repeater
@@ -12,6 +13,12 @@ describe('Todo App', function () {
   function sleep() {
     return flow.execute(waitOne);
   }
+
+  var peer = new jet.Peer({
+    url: 'ws://localhost:1234'
+  });
+
+  peer.call('todo/removeAll');
 
   beforeEach(function () {
 
@@ -64,40 +71,34 @@ describe('Todo App', function () {
 
     expect(todos.count()).toBe(4);
   });
-  //
-  // it('updates when a new Todo is added remotely', function () {
-  //   // Simulate a todo being added remotely
-  //   flow.execute(function() {
-  //     var def = protractor.promise.defer();
-  //     firebaseRef.push({
-  //       title: 'Wash the dishes',
-  //       completed: false
-  //     }, function(err) {
-  //       if( err ) { def.reject(err); }
-  //       else { def.fulfill(); }
-  //     });
-  //     return def.promise;
-  //   });
-  //   expect(todos.count()).toBe(5);
-  // });
-  //
-  // it('updates when an existing Todo is removed remotely', function () {
-  //   // Simulate a todo being removed remotely
-  //   flow.execute(function() {
-  //     var def = protractor.promise.defer();
-  //     var onCallback = firebaseRef.limitToLast(1).on("child_added", function(childSnapshot) {
-  //       // Make sure we only remove a child once
-  //       firebaseRef.off("child_added", onCallback);
-  //
-  //       childSnapshot.ref().remove(function(err) {
-  //         if( err ) { def.reject(err); }
-  //         else { def.fulfill(); }
-  //       });
-  //     });
-  //     return def.promise;
-  //   });
-  //   expect(todos.count()).toBe(4);
-  // });
+
+  it('updates when a new Todo is added remotely', function () {
+    // Simulate a todo being added remotely
+    peer.call('todo/add',[{
+      title: 'Wash the dishes',
+      completed: false
+    }]);
+    sleep();
+    expect(todos.count()).toBe(5);
+  });
+
+  it('updates when an existing Todo is removed remotely', function () {
+    // Simulate a todo being removed remotely
+    var fetcher = peer.fetch({
+      path: {
+        startsWith: 'todo/#'
+      },
+      sort: {
+        from: 1,
+        to: 1
+      }
+    }, function(changes) {
+      fetcher.unfetch();
+      peer.call('todo/remove',[changes[0].value]);      
+    });
+    sleep();
+    expect(todos.count()).toBe(4);
+  });
 
 
 });

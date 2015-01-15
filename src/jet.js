@@ -100,6 +100,7 @@
               peer.set(state.path, $fetcher[i]);
             };
           });
+          $fetcher.length = arr.length;
           debounceApply();
         };
       } else {
