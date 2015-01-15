@@ -72,6 +72,25 @@ describe('Todo App', function () {
     expect(todos.count()).toBe(4);
   });
 
+  it('changes are saved', function(done) {
+    var fetcher = peer.fetch({
+      valueField: {
+        title: {
+          equals: 'Buy groceries'
+        }
+      }
+    }, function(path, event, value) {
+      if (event === 'change') {
+        expect(value.completed).toBe(true);
+        fetcher.unfetch();
+        done();
+      }
+    });
+
+    $('.todo:nth-of-type(1) .toggle').click();
+
+  });
+
   it('updates when a new Todo is added remotely', function () {
     // Simulate a todo being added remotely
     peer.call('todo/add',[{
@@ -94,7 +113,7 @@ describe('Todo App', function () {
       }
     }, function(changes) {
       fetcher.unfetch();
-      peer.call('todo/remove',[changes[0].value]);      
+      peer.call('todo/remove',[changes[0].value]);
     });
     sleep();
     expect(todos.count()).toBe(4);
