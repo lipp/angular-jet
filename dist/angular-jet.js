@@ -5,7 +5,7 @@
  *
  * angular-jet 0.0.0
  * https://github.com/lipp/angular-jet/
- * Date: 01/15/2015
+ * Date: 01/16/2015
  * License: MIT
  */
 (function(exports) {
@@ -53,28 +53,48 @@
     };
 
     AngularPeer.prototype.$call = function(path, args) {
-      this._peer.call(path, args);
+      var defer = $q.defer();
+      var scope = this.$scope;
+      var peer = this._peer;
+      this.$connected.then(function() {
+        peer.call(path, args || [], {
+          success: function(result) {
+            defer.resolve(result);
+            scope.$apply();
+          },
+          error: function(err) {
+            defer.reject(err);
+            scope.$apply();
+          }
+        });
+      });
+      return defer.promise;
     };
 
     // wait for states or methods to become available
     AngularPeer.prototype.$wait = function() {
       var defer = $q.defer();
       var count = 0;
-      var scope = this._peer.$scope;
+      var scope = this.$scope;
       var peer = this._peer;
+      var paths = Array.prototype.slice.call(arguments);
       this.$connected.then(function() {
-        var fetcher = this._peer.fetch({
+        var fetcher = peer.fetch({
           path: {
-            equalsOneOf: arguments
+            equalsOneOf: paths
           }
         }, function(path, event) {
           if (event === 'add') {
             ++count;
-            if (count === arguments.length) {
+            if (count === paths.length) {
               fetcher.unfetch();
               defer.resolve();
               scope.$apply();
             }
+          }
+        }, {
+          error: function(err) {
+            defer.reject(err);
           }
         });
       });

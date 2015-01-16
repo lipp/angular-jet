@@ -150,7 +150,7 @@ module.exports = function(grunt) {
   // Single run tests
   grunt.registerTask('test', ['test:unit', 'test:e2e']);
   grunt.registerTask('test:unit', ['bgShell:jetd', 'karma:singlerun']);
-  grunt.registerTask('test:e2e', ['concat', 'connect:testserver', 'protractor:singlerun']);
+  grunt.registerTask('test:e2e', ['bgShell:jetd','concat', 'connect:testserver', 'protractor:singlerun']);
   grunt.registerTask('test:manual', ['karma:manual']);
 
   // Travis CI testing

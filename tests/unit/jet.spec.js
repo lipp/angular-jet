@@ -70,7 +70,29 @@ describe('$jet', function () {
         $timeout.flush();
       });
 
-      it('.$wait(...) returns a promise and gets resolved', function() {
+      it('.$call returns promise', function() {
+        var call = peer.$call('doesnotexist');
+        expect(angular.isObject(call)).toBe(true);
+        expect(typeof call.then).toBe('function');
+      });
+
+      it('.$call gets resolved', function(done) {
+        peer.$call('syncHello',['Joe']).then(function(greet) {
+          expect(greet).toBe('Hello Joe');
+          done();
+        });
+      });
+
+      it('.$call gets rejected', function(done) {
+        peer.$call('letsFailSync').then(function(greet) {
+          expect(false).toBe('this should not happen');
+        }, function(err) {
+          expect(err.data).toBe('I always fail');
+          done();
+        });
+      });
+
+      it('.$wait(...) returns a promise and gets resolved', function(done) {
         var wait = peer.$wait('syncHello', 'asyncHello');
         expect(angular.isObject(wait)).toBe(true);
         expect(typeof wait.then).toBe('function');
