@@ -68,6 +68,9 @@
     };
 
     AngularPeer.prototype.$call = function(path, args) {
+      if (angular.isDefined(args) && typeof args !== 'object') {
+        throw new Error('second arg to $call must be undefined, Array or Object');
+      }
       return this.$$peerCall('call', path, args || []);
     };
 

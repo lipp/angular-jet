@@ -125,6 +125,15 @@ describe('$jet', function () {
         expect(typeof call.then).toBe('function');
       });
 
+      it('.$call checks arg type', function() {
+        [false, 123, 'foo'].forEach(function(unsupported) {
+          expect( function() {peer.$call('asd', unsupported);} ).toThrow(new Error('second arg to $call must be undefined, Array or Object'));
+        });
+        [{},[]].forEach(function(supported) {
+          expect( function() {peer.$call('asd', supported);} ).not.toThrow();
+        });
+      });
+
       it('.$call gets resolved', function(done) {
         peer.$call('syncHello',['Joe']).then(function(greet) {
           expect(greet).toBe('Hello Joe');
