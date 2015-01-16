@@ -34,9 +34,14 @@
       var connectDefer = $q.defer();
       this.$connected = connectDefer.promise;
 
+      var closeDefer = $q.defer();
+      this.$closed = closeDefer.promise;
+
       var connectTimeout = $timeout(function() {
         connectDefer.reject('Could not connect to: ' + options.url);
       }, options.timeout || 5000);
+
+      var destroyingScope = false;
 
       var peer = this._peer = new jet.Peer({
         url: options.url,
@@ -44,20 +49,30 @@
           $timeout.cancel(connectTimeout);
           connectDefer.resolve();
           scope.$apply();
+        },
+        onClose: function() {
+          closeDefer.resolve();
+          if (!destroyingScope) {
+            scope.$apply();
+          }
         }
       });
 
+      var that = this;
+      that.$$closed = false;
       scope.$on('$destroy', function() {
+        that.$$closed = true;
+        destroyingScope = true;
         peer.close();
       });
     };
 
-    AngularPeer.prototype.$call = function(path, args) {
+    AngularPeer.prototype.$$peerCall = function(peerMethod, path, params) {
       var defer = $q.defer();
       var scope = this.$scope;
       var peer = this._peer;
       this.$connected.then(function() {
-        peer.call(path, args || [], {
+        peer[peerMethod](path, params, {
           success: function(result) {
             defer.resolve(result);
             scope.$apply();
@@ -69,6 +84,17 @@
         });
       });
       return defer.promise;
+    };
+
+    AngularPeer.prototype.$call = function(path, args) {
+      if (angular.isDefined(args) && typeof args !== 'object') {
+        throw new Error('second arg to $call must be undefined, Array or Object');
+      }
+      return this.$$peerCall('call', path, args || []);
+    };
+
+    AngularPeer.prototype.$set = function(path, value) {
+      return this.$$peerCall('set', path, value);
     };
 
     // wait for states or methods to become available
@@ -99,6 +125,10 @@
         });
       });
       return defer.promise;
+    };
+
+    AngularPeer.prototype.$$genSet = function(path) {
+      return function()
     };
 
     AngularPeer.prototype.$fetch = function(expr, scope, debounce) {
@@ -136,6 +166,7 @@
             $fetcher[i].$index = state.index;
             $fetcher[i].$path = state.path;
             $fetcher[i].$save = function() {
+              console.log($fetcher[i]);
               peer.set(state.path, $fetcher[i]);
             };
           });
@@ -149,6 +180,9 @@
             delete $fetcher[path];
           } else if (angular.isDefined(value)) {
             $fetcher[path] = value;
+            $fetcher.$save = function() {
+
+            };
           }
           debounceApply();
         };
@@ -192,7 +226,10 @@
     };
 
     AngularPeer.prototype.$close = function() {
-      this._peer.close();
+      var peer = this._peer;
+      this.$connected.then(function() {
+        peer.close();
+      });
     };
 
     return {
