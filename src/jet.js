@@ -15,9 +15,14 @@
       var connectDefer = $q.defer();
       this.$connected = connectDefer.promise;
 
+      var closeDefer = $q.defer();
+      this.$closed = closeDefer.promise;
+
       var connectTimeout = $timeout(function() {
         connectDefer.reject('Could not connect to: ' + options.url);
       }, options.timeout || 5000);
+
+      var destroyingScope = false;
 
       var peer = this._peer = new jet.Peer({
         url: options.url,
@@ -25,20 +30,30 @@
           $timeout.cancel(connectTimeout);
           connectDefer.resolve();
           scope.$apply();
+        },
+        onClose: function() {
+          closeDefer.resolve();
+          if (!destroyingScope) {
+            scope.$apply();
+          }
         }
       });
 
+      var that = this;
+      that.$$closed = false;
       scope.$on('$destroy', function() {
+        that.$$closed = true;
+        destroyingScope = true;
         peer.close();
       });
     };
 
-    AngularPeer.prototype.$call = function(path, args) {
+    AngularPeer.prototype.$$peerCall = function(peerMethod, path, params) {
       var defer = $q.defer();
       var scope = this.$scope;
       var peer = this._peer;
       this.$connected.then(function() {
-        peer.call(path, args || [], {
+        peer[peerMethod](path, params, {
           success: function(result) {
             defer.resolve(result);
             scope.$apply();
@@ -50,6 +65,14 @@
         });
       });
       return defer.promise;
+    };
+
+    AngularPeer.prototype.$call = function(path, args) {
+      return this.$$peerCall('call', path, args || []);
+    };
+
+    AngularPeer.prototype.$set = function(path, value) {
+      return this.$$peerCall('set', path, value);
     };
 
     // wait for states or methods to become available
@@ -173,7 +196,10 @@
     };
 
     AngularPeer.prototype.$close = function() {
-      this._peer.close();
+      var peer = this._peer;
+      this.$connected.then(function() {
+        peer.close();
+      });
     };
 
     return {

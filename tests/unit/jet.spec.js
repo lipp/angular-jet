@@ -34,8 +34,31 @@ describe('$jet', function () {
         expect(typeof peer).toBe('object');
       });
 
+      it('.$closed is initially false', function() {
+        var $closed = peer.$closed;
+        expect(angular.isObject($closed)).toBe(true);
+        expect(typeof $closed.then).toBe('function');
+      });
+
+      it('.$closed is true after scope destroy', function() {
+        var scope = $rootScope.$new();
+        var peer = new $jet.$Peer({
+          scope: scope
+        });
+        expect(peer.$$closed).toBe(false);
+        scope.$destroy();
+        expect(peer.$$closed).toBe(true);
+      });
+
       it('.$close is function', function() {
         expect(typeof peer.$close).toBe('function');
+      });
+
+      it('.$close resolves $closed promise', function(done) {
+        peer.$close();
+        peer.$closed.then(function() {
+          done();
+        });
       });
 
       it('.$fetch is function', function() {
@@ -43,6 +66,10 @@ describe('$jet', function () {
       });
 
       it('.$wait is function', function() {
+        expect(typeof peer.$wait).toBe('function');
+      });
+
+      it('.$set is function', function() {
         expect(typeof peer.$wait).toBe('function');
       });
 
@@ -70,6 +97,28 @@ describe('$jet', function () {
         $timeout.flush();
       });
 
+      it('.$set returns promise', function() {
+        var set = peer.$set('doesnotexist');
+        expect(angular.isObject(set)).toBe(true);
+        expect(typeof set.then).toBe('function');
+      });
+
+      it('.$set gets resolved', function(done) {
+        peer.$set('acceptOnlyNumbers', 421).then(function(result) {
+          expect(result).toBe(true);
+          done();
+        });
+      });
+
+      it('.$set gets rejected', function(done) {
+        peer.$set('acceptOnlyNumbers', {x:1}).then(function() {
+          expect(false).toBe('this should not happen');
+        }, function(err) {
+          expect(err.message).toBe('Internal error');
+          done();
+        });
+      });
+
       it('.$call returns promise', function() {
         var call = peer.$call('doesnotexist');
         expect(angular.isObject(call)).toBe(true);
@@ -87,7 +136,7 @@ describe('$jet', function () {
         peer.$call('letsFailSync').then(function(greet) {
           expect(false).toBe('this should not happen');
         }, function(err) {
-          expect(err.data).toBe('I always fail');
+          expect(err.message).toBe('Internal error');
           done();
         });
       });
@@ -127,8 +176,10 @@ describe('$jet', function () {
           expect(typeof fetcher.$unfetch).toBe('function');
         });
 
-        it('.$unfetch can be called immediatly', function() {
-          fetcher.$unfetch();
+        it('.$unfetch can be called immediatly and gets resolved', function(done) {
+          fetcher.$unfetch().then(function() {
+            done();
+          });
         });
 
         it('.$ready promise gets resolved and .$active is true', function(done) {
@@ -199,7 +250,7 @@ describe('$jet', function () {
             }
         },true);
         setTimeout(function() {
-          $rootScope.$apply();
+          $timeout.flush();
         },70);
       });
 
