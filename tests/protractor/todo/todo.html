@@ -31,10 +31,10 @@
 
     <!-- Todo list -->
     <div id="todos">
-      <div class="todo" ng-cloak ng-repeat="todo in todos">
+      <div class="todo" ng-cloak ng-repeat="todo in todos | orderBy : 'title'">
         <input class="toggle" type="checkbox" ng-model="todo.completed" ng-change="todo.$save()" />
         <input class="edit" ng-model="todo.title" ng-change="todo.$save()" />
-        <button class="removeTodoButton" ng-click="removeTodo(todo)">Remove</button>
+        <button class="removeTodoButton" ng-click="removeTodo(todo.$val())">Remove</button>
       </div>
     </div>
 

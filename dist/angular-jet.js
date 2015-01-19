@@ -5,7 +5,7 @@
  *
  * angular-jet 0.0.0
  * https://github.com/lipp/angular-jet/
- * Date: 01/16/2015
+ * Date: 01/19/2015
  * License: MIT
  */
 (function(exports) {
@@ -94,7 +94,7 @@
     };
 
     AngularPeer.prototype.$set = function(path, value) {
-      return this.$$peerCall('set', path, value);
+      return this.$$peerCall('set', path, no$copy(value));
     };
 
     // wait for states or methods to become available
@@ -127,8 +127,54 @@
       return defer.promise;
     };
 
-    AngularPeer.prototype.$$genSet = function(path) {
-      return function()
+
+    var AngularFetchedState = function(state, peer, scope) {
+      this.$index = state.index; // optional, undefined for non-sorting fetches
+      this.$path = state.path;
+      this.$$peer = peer;
+      this.$$scope = scope;
+    };
+
+    AngularFetchedState.prototype.$save = function(valueAsResult) {
+      var defer = $q.defer();
+      var value = this.$val();
+      var scope = this.$$scope;
+      this.$$peer.set(this.$path, value, {
+        valueAsResult: valueAsResult,
+        success: function(result) {
+          defer.resolve(result);
+          scope.$apply();
+        },
+        error: function(err) {
+          defer.reject(err);
+          scope.$apply();
+        }
+      });
+      return defer.promise;
+    };
+
+    AngularFetchedState.prototype.$$update = function(value) {
+      angular.forEach(this, function(subValue, key) {
+        if (typeof key === 'string' && key[0] !== '$') {
+          delete this[key];
+        }
+      }, this);
+      angular.extend(this, value);
+    };
+
+    AngularFetchedState.prototype.$val = function() {
+      var value;
+      if (angular.isArray(this)) {
+        value = [];
+      } else if (angular.isObject(this)) {
+        value = {};
+      }
+      angular.forEach(this, function(subValue, key) {
+        if (typeof key === 'string' && key[0] !== '$') {
+          value[key] = subValue;
+        }
+      }, this);
+      return value;
     };
 
     AngularPeer.prototype.$fetch = function(expr, scope, debounce) {
@@ -153,36 +199,33 @@
         }, debounce || 50);
       };
       if (angular.isObject(expr.sort)) {
-        expr.sort.asArray = true;
+        expr.sort.asArray = false; //manually create array
+        var from = expr.sort.from || 1;
         $fetcher = [];
-        fetchCb = function(arr) {
-          arr.forEach(function(state, i) {
-            if (typeof state.value === 'object') {
-              $fetcher[i] = state.value;
-            } else {
-              $fetcher[i] = $fetcher[i] || {}
-              $fetcher[i].value = state.value;
-            }
-            $fetcher[i].$index = state.index;
-            $fetcher[i].$path = state.path;
-            $fetcher[i].$save = function() {
-              console.log($fetcher[i]);
-              peer.set(state.path, $fetcher[i]);
-            };
+        fetchCb = function(changes, n) {
+          changes.forEach(function(change) {
+            var i = change.index - from;
+            if (!angular.isDefined($fetcher[i])) {
+              $fetcher[i] = new AngularFetchedState(change, peer, scope);
+            } else {}
+            $fetcher[i].$$update(change.value);
           });
-          $fetcher.length = arr.length;
+          $fetcher.length = n;
           debounceApply();
         };
       } else {
         $fetcher = {};
         fetchCb = function(path, event, value) {
+          var state;
           if (event === 'remove') {
             delete $fetcher[path];
           } else if (angular.isDefined(value)) {
-            $fetcher[path] = value;
-            $fetcher.$save = function() {
-
-            };
+            if (event === 'add') {
+              $fetcher[path] = new AngularFetchedState({
+                path: path
+              }, peer, scope);
+            }
+            $fetcher[path].$$update(value);
           }
           debounceApply();
         };
