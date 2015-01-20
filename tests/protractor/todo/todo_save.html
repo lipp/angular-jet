@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html ng-app="todo">
   <head>
-    <title>Angular Jet Todo e2e Test</title>
+    <title>Angular Jet Todo (save) e2e Test</title>
 
     <!-- Angular -->
     <script src="../../../bower_components/angular/angular.min.js"></script>
@@ -32,13 +32,13 @@
     <!-- Todo list -->
     <div id="todos">
       <div class="todo" ng-cloak ng-repeat="todo in todos">
-        <input class="toggle" type="checkbox" ng-model="todo.$value.completed" />
-        <input class="edit" ng-model="todo.$value.title" />
+        <input class="toggle" type="checkbox" ng-model="todo.$value.completed" ng-change="todo.$save()"/>
+        <input class="edit" ng-model="todo.$value.title" ng-change="todo.$save()"/>
         <button class="removeTodoButton" ng-click="removeTodo(todo.$value)">Remove</button>
       </div>
     </div>
 
     <!-- Custom JS -->
-    <script src="todo.js" defer></script>
+    <script src="todo_save.js" defer></script>
   </body>
 </html>

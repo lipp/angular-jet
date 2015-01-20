@@ -75,7 +75,7 @@
     };
 
     AngularPeer.prototype.$set = function(path, value) {
-      return this.$$peerCall('set', path, no$copy(value));
+      return this.$$peerCall('set', path, value);
     };
 
     // wait for states or methods to become available
@@ -108,56 +108,43 @@
       return defer.promise;
     };
 
-    var AngularFetchedState = function(state, peer, scope) {
+    var AngularFetchedState = function(state, peer, scope, fetcher) {
       this.$index = state.index; // optional, undefined for non-sorting fetches
       this.$path = state.path;
-      this.$$peer = peer;
-      this.$$scope = scope;
-    };
-
-    AngularFetchedState.prototype.$save = function(valueAsResult) {
-      var defer = $q.defer();
-      var value = this.$val();
-      var scope = this.$$scope;
-      this.$$peer.set(this.$path, value, {
-        valueAsResult: valueAsResult,
-        success: function(result) {
-          defer.resolve(result);
-          scope.$apply();
-        },
-        error: function(err) {
-          defer.reject(err);
-          scope.$apply();
-        }
-      });
-      return defer.promise;
-    };
-
-    AngularFetchedState.prototype.$$update = function(value) {
-      angular.forEach(this, function(subValue, key) {
-        if (typeof key === 'string' && key[0] !== '$') {
-          delete this[key];
-        }
-      }, this);
-      angular.extend(this, value);
-    };
-
-    AngularFetchedState.prototype.$val = function() {
-      var value;
-      if (angular.isArray(this)) {
-        value = [];
-      } else if (angular.isObject(this)) {
-        value = {};
+      this.$value = state.value;
+      var that = this;
+      if (fetcher.$$autoSave) {
+        scope.$watch(function() {
+          return that.$value;
+        }, function(newVal, oldVal) {
+          if (!angular.equals(newVal, oldVal) && fetcher.$$applyingFetch === false) {
+            that.$save();
+          }
+        }, true);
       }
-      angular.forEach(this, function(subValue, key) {
-        if (typeof key === 'string' && key[0] !== '$') {
-          value[key] = subValue;
-        }
-      }, this);
-      return value;
+      that.$save = this.$$genSave(scope, peer);
     };
 
-    AngularPeer.prototype.$fetch = function(expr, scope, debounce) {
+    AngularFetchedState.prototype.$$genSave = function(scope, peer) {
+      return function(valueAsResult) {
+        var defer = $q.defer();
+        var value = this.$value;
+        peer.set(this.$path, value, {
+          valueAsResult: valueAsResult,
+          success: function(result) {
+            defer.resolve(result);
+            scope.$apply();
+          },
+          error: function(err) {
+            defer.reject(err);
+            scope.$apply();
+          }
+        });
+        return defer.promise;
+      };
+    };
+
+    AngularPeer.prototype.$fetch = function(expr, scope) {
       var peer = this._peer;
       var fetchCb;
       var defer = $q.defer();
@@ -173,10 +160,12 @@
         }
         debouncer = $timeout(function() {
           if (active) {
+            $fetcher.$$applyingFetch = true;
             scope.$apply();
+            $fetcher.$$applyingFetch = false;
           }
-          debounce = undefined;
-        }, debounce || 50);
+          debouncer = undefined;
+        }, $fetcher.$$debounce);
       };
       if (angular.isObject(expr.sort)) {
         expr.sort.asArray = false; //manually create array
@@ -186,9 +175,10 @@
           changes.forEach(function(change) {
             var i = change.index - from;
             if (!angular.isDefined($fetcher[i])) {
-              $fetcher[i] = new AngularFetchedState(change, peer, scope);
+              $fetcher[i] = new AngularFetchedState(change, peer, scope, $fetcher);
             } else {}
-            $fetcher[i].$$update(change.value);
+            $fetcher[i].$path = change.path;
+            $fetcher[i].$value = change.value;
           });
           $fetcher.length = n;
           debounceApply();
@@ -200,12 +190,14 @@
           if (event === 'remove') {
             delete $fetcher[path];
           } else if (angular.isDefined(value)) {
+            //console.log(path, value);
             if (event === 'add') {
               $fetcher[path] = new AngularFetchedState({
                 path: path
-              }, peer, scope);
+              }, peer, scope, $fetcher);
             }
-            $fetcher[path].$$update(value);
+            $fetcher[path].$value = value;
+            //console.log($fetcher[path]);
           }
           debounceApply();
         };
@@ -231,6 +223,14 @@
           }
         });
       });
+      $fetcher.$autoSave = function(enable) {
+        $fetcher.$$autoSave = enable;
+      };
+      $fetcher.$debounce = function(ms) {
+        $fetcher.$$debounce = ms;
+      };
+      $fetcher.$$debounce = 50;
+      $fetcher.$$applyingFetch = false;
       $fetcher.$scope = scope;
       $fetcher.$active = false;
       $fetcher.$ready = defer.promise;
