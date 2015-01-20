@@ -67,12 +67,13 @@
       });
     };
 
-    AngularPeer.prototype.$$peerCall = function(peerMethod, path, params) {
+    AngularPeer.prototype.$$peerCall = function(peerMethod, path, params, valueAsResult) {
       var defer = $q.defer();
       var scope = this.$scope;
       var peer = this._peer;
       this.$connected.then(function() {
         peer[peerMethod](path, params, {
+          valueAsResult: valueAsResult,
           success: function(result) {
             defer.resolve(result);
             scope.$apply();
@@ -93,8 +94,8 @@
       return this.$$peerCall('call', path, args || []);
     };
 
-    AngularPeer.prototype.$set = function(path, value) {
-      return this.$$peerCall('set', path, value);
+    AngularPeer.prototype.$set = function(path, value, valueAsResult) {
+      return this.$$peerCall('set', path, value, valueAsResult);
     };
 
     // wait for states or methods to become available
@@ -103,20 +104,36 @@
       var count = 0;
       var scope = this.$scope;
       var peer = this._peer;
+      var elements = {};
       var paths = Array.prototype.slice.call(arguments);
       this.$connected.then(function() {
         var fetcher = peer.fetch({
           path: {
             equalsOneOf: paths
           }
-        }, function(path, event) {
+        }, function(path, event, value) {
           if (event === 'add') {
+            if (angular.isDefined(value)) {
+              elements[path] = new AngularFetchedState({
+                path: path,
+                value: value
+              }, peer, scope);
+            } else {
+              elements[path] = new AngularFetchedMethod({
+                path: path
+              }, peer, scope);
+            }
             ++count;
             if (count === paths.length) {
               fetcher.unfetch();
               defer.resolve();
               scope.$apply();
             }
+          } else if (event === 'remove') {
+            delete elements[path];
+            --count;
+          } else {
+            elements[path].$value = value;
           }
         }, {
           error: function(err) {
@@ -127,39 +144,39 @@
       return defer.promise;
     };
 
-    var AngularFetchedState = function(state, peer, scope, fetcher) {
+    var AngularFetchedState = function(state, angularPeer, scope, fetcher) {
       this.$index = state.index; // optional, undefined for non-sorting fetches
       this.$path = state.path;
       this.$value = state.value;
+      this.$lastValue = angular.copy(state.value);
       var that = this;
-      if (fetcher.$$autoSave) {
+
+      if (fetcher && fetcher.$$autoSave) {
         scope.$watch(function() {
           return that.$value;
         }, function(newVal, oldVal) {
           if (!angular.equals(newVal, oldVal) && fetcher.$$applyingFetch === false) {
-            that.$save();
+            console.log('save...',that.$$reverting);
+            if (that.$$reverting) {
+              that.$$reverting = false;
+              return;
+            }
+            that.$save().then(function(){
+              that.$lastValue = angular.copy(oldVal);
+              delete that.$error;
+            }, function(err) {
+              that.$revert = function() {
+                that.$$reverting = true;
+                that.$value = angular.copy(that.$lastValue);
+                delete that.$error;
+              };
+              that.$error = err;
+            });
           }
         }, true);
       }
-      that.$save = this.$$genSave(scope, peer);
-    };
-
-    AngularFetchedState.prototype.$$genSave = function(scope, peer) {
-      return function(valueAsResult) {
-        var defer = $q.defer();
-        var value = this.$value;
-        peer.set(this.$path, value, {
-          valueAsResult: valueAsResult,
-          success: function(result) {
-            defer.resolve(result);
-            scope.$apply();
-          },
-          error: function(err) {
-            defer.reject(err);
-            scope.$apply();
-          }
-        });
-        return defer.promise;
+      that.$save = function(valueAsResult) {
+        return angularPeer.$set(this.$path, this.$value, valueAsResult);
       };
     };
 
@@ -171,6 +188,7 @@
       var debouncer;
       var peerScope = this.$scope;
       var active = false;
+      var angularPeer = this;
       scope = scope || peerScope;
       expr = expr || {}; // fetch all
       var debounceApply = function() {
@@ -194,10 +212,13 @@
           changes.forEach(function(change) {
             var i = change.index - from;
             if (!angular.isDefined($fetcher[i])) {
-              $fetcher[i] = new AngularFetchedState(change, peer, scope, $fetcher);
+              $fetcher[i] = new AngularFetchedState(change, angularPeer, scope, $fetcher);
             } else {}
+            if (!angular.isDefined($fetcher[i].$error)) {              
+              $fetcher[i].$value = change.value;
+            }
             $fetcher[i].$path = change.path;
-            $fetcher[i].$value = change.value;
+            $fetcher[i].$lastValue = angular.copy(change.value);
           });
           $fetcher.length = n;
           debounceApply();
@@ -216,6 +237,7 @@
               }, peer, scope, $fetcher);
             }
             $fetcher[path].$value = value;
+            $fetcher[path].$lastValue = angular.copy(value);
             //console.log($fetcher[path]);
           }
           debounceApply();
