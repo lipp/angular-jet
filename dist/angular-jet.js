@@ -5,7 +5,7 @@
  *
  * angular-jet 0.0.0
  * https://github.com/lipp/angular-jet/
- * Date: 01/20/2015
+ * Date: 01/21/2015
  * License: MIT
  */
 (function(exports) {
@@ -150,21 +150,25 @@
       this.$value = state.value;
       this.$lastValue = angular.copy(state.value);
       var that = this;
+      that.$$saving = 0;
 
       if (fetcher && fetcher.$$autoSave) {
-        scope.$watch(function() {
+        that.$$unwatch = scope.$watch(function() {
           return that.$value;
         }, function(newVal, oldVal) {
           if (!angular.equals(newVal, oldVal) && fetcher.$$applyingFetch === false) {
-            console.log('save...',that.$$reverting);
+            console.log('save...',that.$$saving);
             if (that.$$reverting) {
               that.$$reverting = false;
               return;
             }
+            ++that.$$saving;
             that.$save().then(function(){
-              that.$lastValue = angular.copy(oldVal);
+              --that.$$saving;
+              //that.$lastValue = angular.copy(oldVal);
               delete that.$error;
             }, function(err) {
+              --that.$$saving;
               that.$revert = function() {
                 that.$$reverting = true;
                 that.$value = angular.copy(that.$lastValue);
@@ -208,17 +212,23 @@
         expr.sort.asArray = false; //manually create array
         var from = expr.sort.from || 1;
         $fetcher = [];
+        var indices = {};
         fetchCb = function(changes, n) {
           changes.forEach(function(change) {
             var i = change.index - from;
             if (!angular.isDefined($fetcher[i])) {
               $fetcher[i] = new AngularFetchedState(change, angularPeer, scope, $fetcher);
-            } else {}
-            if (!angular.isDefined($fetcher[i].$error)) {              
+            } else if (indices[change.path] !== change.index) {
+              if ($fetcher[i].$$unwatch) {
+                $fetcher[i].$$unwatch();
+              }
+            }
+            if ($fetcher[i].$$saving === 0) {
               $fetcher[i].$value = change.value;
             }
             $fetcher[i].$path = change.path;
             $fetcher[i].$lastValue = angular.copy(change.value);
+            indices[change.path] = change.index;
           });
           $fetcher.length = n;
           debounceApply();
@@ -236,7 +246,9 @@
                 path: path
               }, peer, scope, $fetcher);
             }
-            $fetcher[path].$value = value;
+            if ($fetcher[path].$$saving === 0) {
+              $fetcher[path].$value = value;
+            }
             $fetcher[path].$lastValue = angular.copy(value);
             //console.log($fetcher[path]);
           }
