@@ -157,7 +157,6 @@
           return that.$value;
         }, function(newVal, oldVal) {
           if (!angular.equals(newVal, oldVal) && fetcher.$$applyingFetch === false) {
-            console.log('save...',that.$$saving);
             if (that.$$reverting) {
               that.$$reverting = false;
               return;
@@ -234,23 +233,35 @@
           debounceApply();
         };
       } else {
-        $fetcher = {};
+        $fetcher = [];
+        var indices = {};
         fetchCb = function(path, event, value) {
           var state;
           if (event === 'remove') {
-            delete $fetcher[path];
+            var indexToRemove = indices[path];
+            $fetcher[indexToRemove].$$unwatch();
+            $fetcher.splice(indexToRemove, 1);
+            delete indices[path];
+            angular.forEach(indices, function(value, key) {
+              if (value > indexToRemove) {
+                this[key] = value - 1;
+              }
+            }, indices);
           } else if (angular.isDefined(value)) {
-            //console.log(path, value);
+            var index;
             if (event === 'add') {
-              $fetcher[path] = new AngularFetchedState({
+              index = $fetcher.length;
+              indices[path] = index;
+              $fetcher.push(new AngularFetchedState({
                 path: path
-              }, peer, scope, $fetcher);
+              }, angularPeer, scope, $fetcher));
+            } else {
+              index = indices[path];
             }
-            if ($fetcher[path].$$saving === 0) {
-              $fetcher[path].$value = value;
+            if ($fetcher[index].$$saving === 0) {
+              $fetcher[index].$value = value;
             }
-            $fetcher[path].$lastValue = angular.copy(value);
-            //console.log($fetcher[path]);
+            $fetcher[index].$lastValue = angular.copy(value);
           }
           debounceApply();
         };

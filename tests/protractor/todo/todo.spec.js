@@ -91,6 +91,18 @@ describe('Todo App', function () {
 
   });
 
+  it('applying multiple (fast) changes are saved', function(done) {
+    $('.todo:nth-of-type(1) .edit').clear();
+    $('.todo:nth-of-type(1) .edit').sendKeys('blabla');
+    $('.todo:nth-of-type(1) .edit').sendKeys('foo');
+    sleep();
+    $('.todo:nth-of-type(1) .edit').getAttribute('value').then(function(value) {
+      expect(value).toBe('blablafoo');
+      done();
+    });
+  });
+
+
   it('updates when a new Todo is added remotely', function () {
     // Simulate a todo being added remotely
     peer.call('todo/add',[{
