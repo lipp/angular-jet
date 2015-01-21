@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html ng-app="todo">
+  <head>
+    <title>Angular Jet Todo e2e Test</title>
+
+    <!-- Angular -->
+    <script src="../../../bower_components/angular/angular.min.js"></script>
+
+    <!-- Firebase -->
+    <script src="../../../bower_components/jet/deploy/jet.js"></script>
+
+    <!-- AngularFire -->
+    <script src="../../../dist/angular-jet.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="todo.css">
+  </head>
+
+  <body ng-controller="TodoCtrl">
+    <div>
+
+      <!-- Add a random todo button -->
+      <button id="addRandomTodoButton" ng-click="addRandomTodo()">Add a Random Todo</button>
+
+    </div>
+
+    <!-- Add todo input -->
+    <form ng-submit="addTodo()">
+      <input placeholder="What needs to be done?" ng-model="newTodo" autofocus>
+    </form>
+    <form>
+      <select ng-model="orderAttr">
+        <option value="$value.title">Title</option>
+        <option value="$value.id">ID</option>
+      </select>
+    </form>
+
+    <!-- Todo list -->
+    <div id="todos">
+      <div class="todo" ng-cloak ng-repeat="todo in todos | orderBy: orderAttr">
+        {{todo.$value[orderAttr]}}
+        <input class="toggle" type="checkbox" ng-model="todo.$value.completed" />
+        <input class="edit" ng-model="todo.$value.title" />
+        <button class="removeTodoButton" ng-click="removeTodo(todo.$value)">Remove</button>
+        <span ng-if="todo.$error" ng-click="todo.$revert()">{{todo.$error.data.message}} Click to revert.</span>
+      </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="todo_unordered.js" defer></script>
+  </body>
+</html>
