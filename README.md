@@ -1,6 +1,80 @@
 # angular-jet
 Angular Binding for [Jet Realtime Bus](http://jetbus.io/)
 
+# Example usage
+
+This is a classic todo app. Realtime with Jet. Changes of the model are synced
+automatically! No need to mess around with ng-change.
+
+```html
+  <body ng-controller="TodoCtrl">
+    <div>
+
+      <!-- Add a random todo button -->
+      <button ng-click="addRandomTodo()">Add a Random Todo</button>
+
+    </div>
+
+    <!-- Add todo input -->
+    <form ng-submit="addTodo()">
+      <input placeholder="What needs to be done?" ng-model="newTodo" autofocus>
+    </form>
+
+    <!-- Todo list -->
+    <div id="todos">
+      <div ng-cloak ng-repeat="todo in todos | orderBy: '$value.id'">
+        <input type="checkbox" ng-model="todo.$value.completed" />
+        <input ng-model="todo.$value.title" />
+        <button ng-click="removeTodo(todo.$value)">Remove</button>
+        <span ng-if="todo.$error" ng-click="todo.$revert()">{{todo.$error.data.message}} Click to revert.</span>
+      </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="todo.js" defer></script>
+  </body>
+```
+
+```javascript
+var app = angular.module('todo',['jet']);
+app. controller('TodoCtrl', function Todo($scope, $jet) {
+  // Create a Jet peer
+  var peer = new $jet.$Peer({
+    url: 'ws://localhost:1234',
+    scope: $scope
+  });
+
+  // Get the todos as an array
+  $scope.todos = peer.$fetch({
+    path: {
+      startsWith: 'todo/#'
+    }
+  });
+
+  /* Adds a new todo item */
+  $scope.addTodo = function() {
+    if ($scope.newTodo !== '') {
+      peer.$call('todo/add', [{title: $scope.newTodo, completed: false}]);
+      $scope.newTodo = '';
+    }
+  };
+
+  /* Adds a random todo item */
+  $scope.addRandomTodo = function () {
+    $scope.newTodo = 'Todo ' + new Date().getTime();
+    $scope.addTodo();
+  }
+
+  /* Removes the todo item with the inputted ID */
+  $scope.removeTodo = function(todo) {
+    peer.$call('todo/remove', [todo]);
+  };
+
+});
+
+```
+
+
 # API
 
 ## $jet.$Peer([options]) // function (ctor)
@@ -92,7 +166,7 @@ $scope.todos = peer.$fetch({
 //  gender: 'male',
 //  score: 12345
 // }
-$scope.todos = peer.$fetch({
+$scope.topFemalePlayers = peer.$fetch({
   path: {
     startsWith: 'players/#'
   },
