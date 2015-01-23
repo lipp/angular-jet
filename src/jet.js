@@ -185,6 +185,7 @@
       var angularPeer = this;
       scope = scope || peerScope;
       expr = expr || {}; // fetch all
+      var indices = {};
       var debounceApply = function() {
         if (angular.isDefined(debouncer)) {
           $timeout.cancel(debouncer);
@@ -202,7 +203,6 @@
         expr.sort.asArray = false; //manually create array
         var from = expr.sort.from || 1;
         $fetcher = [];
-        var indices = {};
         fetchCb = function(changes, n) {
           changes.forEach(function(change) {
             var i = change.index - from;
@@ -225,9 +225,7 @@
         };
       } else {
         $fetcher = [];
-        var indices = {};
         fetchCb = function(path, event, value) {
-          var state;
           if (event === 'remove') {
             var indexToRemove = indices[path];
             $fetcher[indexToRemove].$$unwatch();

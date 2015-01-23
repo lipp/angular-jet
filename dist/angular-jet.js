@@ -104,6 +104,7 @@
       var count = 0;
       var scope = this.$scope;
       var peer = this._peer;
+      var angularPeer = this;
       var elements = {};
       var paths = Array.prototype.slice.call(arguments);
       this.$connected.then(function() {
@@ -117,11 +118,11 @@
               elements[path] = new AngularFetchedState({
                 path: path,
                 value: value
-              }, peer, scope);
+              }, angularPeer, scope);
             } else {
               elements[path] = new AngularFetchedMethod({
                 path: path
-              }, peer, scope);
+              }, angularPeer);
             }
             ++count;
             if (count === paths.length) {
@@ -144,11 +145,20 @@
       return defer.promise;
     };
 
+    var AngularFetchedMethod = function(path, angularPeer) {
+      this.$path = path;
+      this.$$angularPeer = angularPeer;
+    };
+
+    AngularFetchedMethod.prototype.$call = function(args) {
+      return this.$$angularPeer.$call(this.$path, args);
+    };
+
     var AngularFetchedState = function(state, angularPeer, scope, fetcher) {
       this.$index = state.index; // optional, undefined for non-sorting fetches
       this.$path = state.path;
       this.$value = state.value;
-      this.$lastValue = angular.copy(state.value);
+      this.$fetchedValue = angular.copy(state.value);
       var that = this;
       that.$$saving = 0;
 
@@ -164,13 +174,13 @@
             ++that.$$saving;
             that.$save().then(function(){
               --that.$$saving;
-              //that.$lastValue = angular.copy(oldVal);
+              //that.$fetchedValue = angular.copy(oldVal);
               delete that.$error;
             }, function(err) {
               --that.$$saving;
               that.$revert = function() {
                 that.$$reverting = true;
-                that.$value = angular.copy(that.$lastValue);
+                that.$value = angular.copy(that.$fetchedValue);
                 delete that.$error;
               };
               that.$error = err;
@@ -194,6 +204,7 @@
       var angularPeer = this;
       scope = scope || peerScope;
       expr = expr || {}; // fetch all
+      var indices = {};
       var debounceApply = function() {
         if (angular.isDefined(debouncer)) {
           $timeout.cancel(debouncer);
@@ -211,7 +222,6 @@
         expr.sort.asArray = false; //manually create array
         var from = expr.sort.from || 1;
         $fetcher = [];
-        var indices = {};
         fetchCb = function(changes, n) {
           changes.forEach(function(change) {
             var i = change.index - from;
@@ -226,7 +236,7 @@
               $fetcher[i].$value = change.value;
             }
             $fetcher[i].$path = change.path;
-            $fetcher[i].$lastValue = angular.copy(change.value);
+            $fetcher[i].$fetchedValue = angular.copy(change.value);
             indices[change.path] = change.index;
           });
           $fetcher.length = n;
@@ -234,9 +244,7 @@
         };
       } else {
         $fetcher = [];
-        var indices = {};
         fetchCb = function(path, event, value) {
-          var state;
           if (event === 'remove') {
             var indexToRemove = indices[path];
             $fetcher[indexToRemove].$$unwatch();
@@ -261,7 +269,7 @@
             if ($fetcher[index].$$saving === 0) {
               $fetcher[index].$value = value;
             }
-            $fetcher[index].$lastValue = angular.copy(value);
+            $fetcher[index].$fetchedValue = angular.copy(value);
           }
           debounceApply();
         };

@@ -69,7 +69,7 @@ module.exports = function(grunt) {
       },
       app : {
         files : {
-          'dist/angularfire.min.js' : ['dist/angularfire.js']
+          'dist/angular-jet.min.js' : ['dist/angular-jet.js']
         }
       }
     },
