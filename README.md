@@ -21,7 +21,7 @@ This is a classic todo app. Realtime with Jet.
 
     <!-- Todo list -->
     <div id="todos">
-      <div class="todo" ng-cloak ng-repeat="todo in todos">
+      <div class="todo" ng-cloak ng-repeat="todo in todos | orderBy: '$value.id'">
         <input class="toggle" type="checkbox" ng-model="todo.$value.completed" />
         <input class="edit" ng-model="todo.$value.title" />
         <button class="removeTodoButton" ng-click="removeTodo(todo.$value)">Remove</button>
@@ -47,14 +47,7 @@ app. controller('TodoCtrl', function Todo($scope, $jet) {
   $scope.todos = peer.$fetch({
     path: {
       startsWith: 'todo/#'
-    },
-    sort: {
-			byValueField: {
-				id: 'number'
-			},
-			from: 1,
-			to: 100
-		}
+    }
   });
 
   /* Adds a new todo item */
