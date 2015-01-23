@@ -1,7 +1,7 @@
 var protractor = require('protractor');
 var jet = require('node-jet');
 
-describe('Todo App', function () {
+describe('Todo App (manual save)', function () {
   // Reference to the todos repeater
   var todos = element.all(by.repeater('todo in todos'));
   var flow = protractor.promise.controlFlow();
@@ -18,12 +18,15 @@ describe('Todo App', function () {
     url: 'ws://localhost:1234'
   });
 
-  peer.call('todo/removeAll');
+  var cleared = false;
 
   beforeEach(function () {
-
+    if (!cleared) {
+      peer.call('todo/removeAll');
+      cleared = true;
+    }
     // Navigate to the todo app
-    browser.get('todo/todo.html');
+    browser.get('todo/todo_save.html');
 
   });
 
@@ -31,7 +34,7 @@ describe('Todo App', function () {
   });
 
   it('has the correct title', function () {
-    expect(browser.getTitle()).toEqual('Angular Jet Todo e2e Test');
+    expect(browser.getTitle()).toEqual('Angular Jet Todo (save) e2e Test');
   });
 
   it('starts with an empty list of Todos', function () {
@@ -90,18 +93,6 @@ describe('Todo App', function () {
     $('.todo:nth-of-type(1) .toggle').click();
 
   });
-
-  it('applying multiple (fast) changes are saved', function(done) {
-    $('.todo:nth-of-type(1) .edit').clear();
-    $('.todo:nth-of-type(1) .edit').sendKeys('blabla');
-    $('.todo:nth-of-type(1) .edit').sendKeys('foo');
-    sleep();
-    $('.todo:nth-of-type(1) .edit').getAttribute('value').then(function(value) {
-      expect(value).toBe('blablafoo');
-      done();
-    });
-  });
-
 
   it('updates when a new Todo is added remotely', function () {
     // Simulate a todo being added remotely

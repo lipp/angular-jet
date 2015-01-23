@@ -20,6 +20,8 @@ app. controller('TodoCtrl', function Todo($scope, $jet) {
 		}
   });
 
+  $scope.todos.$autoSave(false);
+
   /* Adds a new todo item */
   $scope.addTodo = function() {
     if ($scope.newTodo !== '') {

@@ -217,8 +217,10 @@ describe('$jet', function () {
           equalsOneOf: ['acceptOnlyNumbers', 'persons/1']
         }});
         setTimeout(function() {
-          expect(typeof fetcher['acceptOnlyNumbers']).toBe('number');
-          expect(typeof fetcher['persons/1']).toBe('object');
+          expect(typeof fetcher['acceptOnlyNumbers'].$value).toBe('number');
+          expect(typeof fetcher['persons/1'].$value).toBe('object');
+          expect(typeof fetcher['persons/1'].$save).toBe('function');
+          expect(fetcher['persons/1'].$path).toBe('persons/1');
           done();
         },70);
       });
@@ -248,13 +250,16 @@ describe('$jet', function () {
             if (topPlayers.length !== 0) {
               expect(topPlayers.$active).toBe(true);
               expect(topPlayers.length).toBe(3)
+              expect(typeof topPlayers[0].$value).toBe('object');
+              expect(typeof topPlayers[1].$value).toBe('object');
+              expect(typeof topPlayers[2].$value).toBe('object');
 
-              expect(typeof topPlayers[0]).toBe('object');
-              expect(typeof topPlayers[1]).toBe('object');
-              expect(typeof topPlayers[2]).toBe('object');
+              expect(topPlayers[0].$value.score > topPlayers[1].$value.score).toBe(true);
+              expect(topPlayers[1].$value.score > topPlayers[2].$value.score).toBe(true);
 
-              expect(topPlayers[0].score > topPlayers[1].score).toBe(true);
-              expect(topPlayers[1].score > topPlayers[2].score).toBe(true);
+              expect(typeof topPlayers[0].$save).toBe('function');
+              expect(typeof topPlayers[0].$path).toBe('string');
+              expect(topPlayers[0].$index).toBe(1);
               done();
             }
         },true);

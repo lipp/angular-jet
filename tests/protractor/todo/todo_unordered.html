@@ -28,10 +28,17 @@
     <form ng-submit="addTodo()">
       <input placeholder="What needs to be done?" ng-model="newTodo" autofocus>
     </form>
+    <form>
+      <select ng-model="orderAttr">
+        <option value="$value.title">Title</option>
+        <option value="$value.id">ID</option>
+      </select>
+    </form>
 
     <!-- Todo list -->
     <div id="todos">
-      <div class="todo" ng-cloak ng-repeat="todo in todos">
+      <div class="todo" ng-cloak ng-repeat="todo in todos | orderBy: orderAttr">
+        {{todo.$value[orderAttr]}}
         <input class="toggle" type="checkbox" ng-model="todo.$value.completed" />
         <input class="edit" ng-model="todo.$value.title" />
         <button class="removeTodoButton" ng-click="removeTodo(todo.$value)">Remove</button>
@@ -40,6 +47,6 @@
     </div>
 
     <!-- Custom JS -->
-    <script src="todo.js" defer></script>
+    <script src="todo_unordered.js" defer></script>
   </body>
 </html>

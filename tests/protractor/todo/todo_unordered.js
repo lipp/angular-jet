@@ -10,15 +10,12 @@ app. controller('TodoCtrl', function Todo($scope, $jet) {
   $scope.todos = peer.$fetch({
     path: {
       startsWith: 'todo/#'
-    },
-    sort: {
-			byValueField: {
-				id: 'number'
-			},
-			from: 1,
-			to: 100
-		}
+    }
   });
+
+  $scope.todos.$autoSave(true);
+
+  $scope.orderAttr = '$value.title';
 
   /* Adds a new todo item */
   $scope.addTodo = function() {
