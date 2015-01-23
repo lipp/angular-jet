@@ -85,6 +85,7 @@
       var count = 0;
       var scope = this.$scope;
       var peer = this._peer;
+      var angularPeer = this;
       var elements = {};
       var paths = Array.prototype.slice.call(arguments);
       this.$connected.then(function() {
@@ -98,11 +99,11 @@
               elements[path] = new AngularFetchedState({
                 path: path,
                 value: value
-              }, peer, scope);
+              }, angularPeer, scope);
             } else {
               elements[path] = new AngularFetchedMethod({
                 path: path
-              }, peer, scope);
+              }, angularPeer);
             }
             ++count;
             if (count === paths.length) {
@@ -123,6 +124,15 @@
         });
       });
       return defer.promise;
+    };
+
+    var AngularFetchedMethod = function(path, angularPeer) {
+      this.$path = path;
+      this.$$angularPeer = angularPeer;
+    };
+
+    AngularFetchedMethod.prototype.$call = function(args) {
+      return this.$$angularPeer.$call(this.$path, args);
     };
 
     var AngularFetchedState = function(state, angularPeer, scope, fetcher) {
