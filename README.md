@@ -3,14 +3,15 @@ Angular Binding for [Jet Realtime Bus](http://jetbus.io/)
 
 # Example usage
 
-This is a classic todo app. Realtime with Jet.
+This is a classic todo app. Realtime with Jet. Changes of the model are synced
+automatically! No need to mess around with ng-change.
 
 ```html
   <body ng-controller="TodoCtrl">
     <div>
 
       <!-- Add a random todo button -->
-      <button id="addRandomTodoButton" ng-click="addRandomTodo()">Add a Random Todo</button>
+      <button ng-click="addRandomTodo()">Add a Random Todo</button>
 
     </div>
 
@@ -21,10 +22,10 @@ This is a classic todo app. Realtime with Jet.
 
     <!-- Todo list -->
     <div id="todos">
-      <div class="todo" ng-cloak ng-repeat="todo in todos | orderBy: '$value.id'">
-        <input class="toggle" type="checkbox" ng-model="todo.$value.completed" />
-        <input class="edit" ng-model="todo.$value.title" />
-        <button class="removeTodoButton" ng-click="removeTodo(todo.$value)">Remove</button>
+      <div ng-cloak ng-repeat="todo in todos | orderBy: '$value.id'">
+        <input type="checkbox" ng-model="todo.$value.completed" />
+        <input ng-model="todo.$value.title" />
+        <button ng-click="removeTodo(todo.$value)">Remove</button>
         <span ng-if="todo.$error" ng-click="todo.$revert()">{{todo.$error.data.message}} Click to revert.</span>
       </div>
     </div>
