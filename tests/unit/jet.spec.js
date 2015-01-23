@@ -212,15 +212,19 @@ describe('$jet', function () {
 
       }); // basics
 
-      it('fetch states as map (default) from "node-jet/bin/some-service.js"', function(done) {
+      it('fetch unsorted states from "node-jet/bin/some-service.js"', function(done) {
         var fetcher = peer.$fetch({path: {
           equalsOneOf: ['acceptOnlyNumbers', 'persons/1']
         }});
         setTimeout(function() {
-          expect(typeof fetcher['acceptOnlyNumbers'].$value).toBe('number');
-          expect(typeof fetcher['persons/1'].$value).toBe('object');
-          expect(typeof fetcher['persons/1'].$save).toBe('function');
-          expect(fetcher['persons/1'].$path).toBe('persons/1');
+          var pathSortedFetcher = fetcher.sort(function(a,b) {
+            return a.$path - b.$path;
+          });
+          expect(pathSortedFetcher[0].$path).toBe('acceptOnlyNumbers');
+          expect(typeof pathSortedFetcher[0].$value).toBe('number');
+          expect(typeof pathSortedFetcher[0].$save).toBe('function');
+          expect(typeof pathSortedFetcher[0].$index).toBe('undefined');
+          expect(pathSortedFetcher[1].$path).toBe('persons/1');
           done();
         },70);
       });
