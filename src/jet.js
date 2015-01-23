@@ -129,7 +129,7 @@
       this.$index = state.index; // optional, undefined for non-sorting fetches
       this.$path = state.path;
       this.$value = state.value;
-      this.$lastValue = angular.copy(state.value);
+      this.$fetchedValue = angular.copy(state.value);
       var that = this;
       that.$$saving = 0;
 
@@ -145,13 +145,13 @@
             ++that.$$saving;
             that.$save().then(function(){
               --that.$$saving;
-              //that.$lastValue = angular.copy(oldVal);
+              //that.$fetchedValue = angular.copy(oldVal);
               delete that.$error;
             }, function(err) {
               --that.$$saving;
               that.$revert = function() {
                 that.$$reverting = true;
-                that.$value = angular.copy(that.$lastValue);
+                that.$value = angular.copy(that.$fetchedValue);
                 delete that.$error;
               };
               that.$error = err;
@@ -207,7 +207,7 @@
               $fetcher[i].$value = change.value;
             }
             $fetcher[i].$path = change.path;
-            $fetcher[i].$lastValue = angular.copy(change.value);
+            $fetcher[i].$fetchedValue = angular.copy(change.value);
             indices[change.path] = change.index;
           });
           $fetcher.length = n;
@@ -242,7 +242,7 @@
             if ($fetcher[index].$$saving === 0) {
               $fetcher[index].$value = value;
             }
-            $fetcher[index].$lastValue = angular.copy(value);
+            $fetcher[index].$fetchedValue = angular.copy(value);
           }
           debounceApply();
         };
@@ -274,6 +274,7 @@
       $fetcher.$debounce = function(ms) {
         $fetcher.$$debounce = ms;
       };
+      $fetcher.$$autoSave = true;
       $fetcher.$$debounce = 50;
       $fetcher.$$applyingFetch = false;
       $fetcher.$scope = scope;

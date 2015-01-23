@@ -5,7 +5,7 @@
  *
  * angular-jet 0.0.0
  * https://github.com/lipp/angular-jet/
- * Date: 01/21/2015
+ * Date: 01/23/2015
  * License: MIT
  */
 (function(exports) {
@@ -293,6 +293,7 @@
       $fetcher.$debounce = function(ms) {
         $fetcher.$$debounce = ms;
       };
+      $fetcher.$$autoSave = true;
       $fetcher.$$debounce = 50;
       $fetcher.$$applyingFetch = false;
       $fetcher.$scope = scope;
