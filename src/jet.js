@@ -128,11 +128,12 @@
 
     var AngularFetchedMethod = function(path, angularPeer) {
       this.$path = path;
-      this.$$angularPeer = angularPeer;
+      this.$call = function(args) {
+        return angularPeer.$call(path, args);
+      };
     };
 
-    AngularFetchedMethod.prototype.$call = function(args) {
-      return this.$$angularPeer.$call(this.$path, args);
+    AngularFetchedMethod.prototype.$$unwatch = function() {
     };
 
     var AngularFetchedState = function(state, angularPeer, scope, fetcher) {
@@ -174,132 +175,183 @@
       };
     };
 
-    AngularPeer.prototype.$fetch = function(expr, scope) {
-      var peer = this._peer;
-      var fetchCb;
-      var defer = $q.defer();
-      var $fetcher;
-      var debouncer;
-      var peerScope = this.$scope;
-      var active = false;
-      var angularPeer = this;
-      scope = scope || peerScope;
-      expr = expr || {}; // fetch all
-      var indices = {};
-      var debounceApply = function() {
-        if (angular.isDefined(debouncer)) {
-          $timeout.cancel(debouncer);
-        }
-        debouncer = $timeout(function() {
-          if (active) {
-            $fetcher.$$applyingFetch = true;
-            scope.$apply();
-            $fetcher.$$applyingFetch = false;
-          }
-          debouncer = undefined;
-        }, $fetcher.$$debounce);
+    var AngularFetcher = function(opts) {
+      var fetcher = this;
+      fetcher.$$readyDefer = $q.defer();
+      fetcher.$ready = fetcher.$$readyDefer.promise;
+      fetcher.$$autoSave = true;
+      fetcher.$$debounce = 50;
+      fetcher.$$applyingFetch = false;
+      fetcher.$getScope = function() {
+        return opts.scope || opts.peer.$scope;
       };
-      if (angular.isObject(expr.sort)) {
-        expr.sort.asArray = false; //manually create array
-        var from = expr.sort.from || 1;
-        $fetcher = [];
-        fetchCb = function(changes, n) {
-          changes.forEach(function(change) {
-            var i = change.index - from;
-            if (!angular.isDefined($fetcher[i])) {
-              $fetcher[i] = new AngularFetchedState(change, angularPeer, scope, $fetcher);
-            } else if (indices[change.path] !== change.index) {
-              if ($fetcher[i].$$unwatch) {
-                $fetcher[i].$$unwatch();
-              }
-            }
-            if ($fetcher[i].$$saving === 0) {
-              $fetcher[i].$value = change.value;
-            }
-            $fetcher[i].$path = change.path;
-            $fetcher[i].$fetchedValue = angular.copy(change.value);
-            indices[change.path] = change.index;
-          });
-          $fetcher.length = n;
-          debounceApply();
-        };
+      fetcher.$$hasOwnScope = angular.isDefined(opts.scope);
+      fetcher.$active = false;
+      fetcher.$$getAngularPeer = function() {
+        return opts.peer;
+      };
+      return fetcher;
+    };
+
+    AngularFetcher.prototype = Object.create(Array.prototype);
+
+    AngularFetcher.prototype.$autoSave = function(enable) {
+      if (angular.isDefined(enable)) {
+        this.$$autoSave = enable;
       } else {
-        $fetcher = [];
-        fetchCb = function(path, event, value) {
-          if (event === 'remove') {
-            var indexToRemove = indices[path];
-            $fetcher[indexToRemove].$$unwatch();
-            $fetcher.splice(indexToRemove, 1);
-            delete indices[path];
-            angular.forEach(indices, function(value, key) {
-              if (value > indexToRemove) {
-                this[key] = value - 1;
-              }
-            }, indices);
-          } else if (angular.isDefined(value)) {
-            var index;
-            if (event === 'add') {
-              index = $fetcher.length;
-              indices[path] = index;
-              $fetcher.push(new AngularFetchedState({
-                path: path
-              }, angularPeer, scope, $fetcher));
-            } else {
-              index = indices[path];
-            }
-            if ($fetcher[index].$$saving === 0) {
-              $fetcher[index].$value = value;
-            }
-            $fetcher[index].$fetchedValue = angular.copy(value);
-          }
-          debounceApply();
-        };
+        return this.$$autoSave;
       }
-      this.$connected.then(function() {
-        $fetcher.$ref = peer.fetch(expr, fetchCb, {
+    };
+
+    AngularFetcher.prototype.$debounce = function(ms) {
+      if (angular.isDefined(ms)) {
+        this.$$debounce = ms;
+      } else {
+        return this.$$debounce;
+      }
+    };
+
+    AngularFetcher.prototype.$unfetch = function() {
+      var defer = $q.defer();
+      var that = this;
+      this.$ready.then(function() {
+        that.$ref.unfetch();
+        that.$active = false;
+        defer.resolve();
+      });
+      return defer.promise;
+    };
+
+    AngularFetcher.prototype.debounceApply = function() {
+      var that = this;
+      if (angular.isDefined(this.$$debouncer)) {
+        $timeout.cancel(this.$$debouncer);
+      }
+      this.$$debouncer = $timeout(function() {
+        if (that.$active) {
+          that.$$applyingFetch = true;
+          that.$getScope().$apply();
+          that.$$applyingFetch = false;
+        }
+        that.$$debouncer = undefined;
+      }, this.$$debounce);
+    };
+
+    AngularFetcher.prototype.$$createSortedFetchCb = function(expr) {
+      var indices = {};
+      expr.sort.asArray = false; //manually create array
+      var from = expr.sort.from || 1;
+      var that = this;
+      var angularPeer = this.$$getAngularPeer();
+      var scope = this.$getScope();
+      var fetchCb = function(changes, n) {
+        changes.forEach(function(change) {
+          var i = change.index - from;
+          var entry = that[i];
+          if (!angular.isDefined(entry)) {
+            if (angular.isDefined(change.value)) {
+              that[i] = new AngularFetchedState(change, angularPeer, scope, that);
+            } else {
+              that[i] = new AngularFetchedMethod(change.path, angularPeer);
+            }
+            entry = that[i];
+          } else if (indices[change.path] !== change.index) {
+            if (entry.$$unwatch) {
+              entry.$$unwatch();
+            }
+          }
+          if (angular.isDefined(change.state)) {
+            if (entry.$$saving === 0) {
+              entry.$value = change.value;
+              entry.$fetchedValue = angular.copy(change.value);
+            }
+          }
+          entry.$path = change.path;
+          indices[change.path] = change.index;
+        });
+        that.length = n;
+        that.debounceApply();
+      };
+      return fetchCb;
+    };
+
+    AngularFetcher.prototype.$$createUnsortedFetchCb = function(expr) {
+      var indices = {};
+      var that = this;
+      var angularPeer = this.$$getAngularPeer();
+      var scope = this.$getScope();
+
+      var fetchCb = function(path, event, value) {
+        if (event === 'remove') {
+          var indexToRemove = indices[path];
+          that[indexToRemove].$$unwatch();
+          that.splice(indexToRemove, 1);
+          delete indices[path];
+          angular.forEach(indices, function(value, key) {
+            if (value > indexToRemove) {
+              this[key] = value - 1;
+            }
+          }, indices);
+        } else if (angular.isDefined(value)) {
+          var index;
+          if (event === 'add') {
+            index = that.length;
+            indices[path] = index;
+            that.push(new AngularFetchedState({
+              path: path
+            }, angularPeer, scope, that));
+          } else {
+            index = indices[path];
+          }
+          if (that[index].$$saving === 0) {
+            that[index].$value = value;
+          }
+          that[index].$fetchedValue = angular.copy(value);
+        }
+        that.debounceApply();
+      };
+      return fetchCb;
+    };
+
+    AngularFetcher.prototype.$$fetch = function(expr) {
+      var that = this;
+      var fetchCb;
+      if (angular.isDefined(expr.sort)) {
+        fetchCb = this.$$createSortedFetchCb(expr);
+      } else {
+        fetchCb = this.$$createUnsortedFetchCb(expr);
+      }
+      this.$$getAngularPeer().$connected.then(function() {
+        that.$ref = that.$$getAngularPeer()._peer.fetch(expr, fetchCb, {
           success: function() {
-            if (scope && scope !== peerScope) {
-              scope.$on('$destroy', function() {
-                $fetcher.$ref.unfetch();
-                active = false;
-                $fetcher.$active = false;
+            if (that.$$hasOwnScope) {
+              that.$getScope().$on('$destroy', function() {
+                that.$ref.unfetch();
+                that.$active = false;
               });
             }
-            active = true;
-            $fetcher.$active = true;
-            defer.resolve($fetcher);
-            scope.$apply();
+            that.$active = true;
+            that.$$readyDefer.resolve(that);
+            that.$getScope().$apply();
           },
           error: function(err) {
-            defer.reject(err.message);
-            scope.$apply();
+            that.$$readyDefer.reject(err.message);
+            that.$getScope().$apply();
           }
         });
       });
-      $fetcher.$autoSave = function(enable) {
-        $fetcher.$$autoSave = enable;
-      };
-      $fetcher.$debounce = function(ms) {
-        $fetcher.$$debounce = ms;
-      };
-      $fetcher.$$autoSave = true;
-      $fetcher.$$debounce = 50;
-      $fetcher.$$applyingFetch = false;
-      $fetcher.$scope = scope;
-      $fetcher.$active = false;
-      $fetcher.$ready = defer.promise;
-      $fetcher.$unfetch = function() {
-        var defer = $q.defer();
-        $fetcher.$ready.then(function() {
-          $fetcher.$ref.unfetch();
-          active = false;
-          $fetcher.$active = false;
-          defer.resolve();
-        });
-        return defer.promise;
-      };
 
-      return $fetcher;
+    };
+
+
+    AngularPeer.prototype.$fetch = function(expr, scope) {
+      var fetcher = new AngularFetcher({
+        peer: this,
+        scope: scope
+      });
+
+      fetcher.$$fetch(expr || {});
+      return fetcher;
     };
 
     AngularPeer.prototype.$close = function() {
