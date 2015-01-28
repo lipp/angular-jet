@@ -264,29 +264,53 @@
       var angularPeer = this.$$getAngularPeer();
       var scope = this.$getScope();
       var fetchCb = function(changes, n) {
+        var moves = [];
+        var remove = {};
         changes.forEach(function(change) {
           var i = change.index - from;
-          var entry = that[i];
-          if (!angular.isDefined(entry)) {
-            if (angular.isDefined(change.value)) {
-              that[i] = new AngularFetchedState(change, angularPeer, scope, that);
+          var isState = angular.isDefined(change.value);
+          var entry;
+          var oldIndex = indices[change.path];
+          var newIndex = change.index - from;
+          if (!angular.isDefined(oldIndex)) {
+            // need to create new element?
+            if (isState) {
+              entry = new AngularFetchedState(change, angularPeer, scope, that);
             } else {
-              that[i] = new AngularFetchedMethod(change.path, angularPeer);
+              entry = new AngularFetchedMethod(change.path, angularPeer);
             }
-            entry = that[i];
-          } else if (indices[change.path] !== change.index) {
-            if (entry.$$unwatch) {
-              entry.$$unwatch();
-            }
+          } else {
+            // grab existing element
+            entry = that[oldIndex];
           }
-          if (angular.isDefined(change.value)) {
+          if (isState) {
             if (entry.$$saving === 0) {
               entry.$value = change.value;
               entry.$fetchedValue = angular.copy(change.value);
             }
           }
-          entry.$path = change.path;
-          indices[change.path] = change.index;
+          // needs to be moved?
+
+          if (oldIndex !== newIndex) {
+            indices[change.path] = newIndex;
+            entry.$index = change.index;
+            if (angular.isDefined(oldIndex)) {
+              remove[oldIndex] = that[oldIndex];
+            }
+            delete remove[newIndex];
+            moves.push({
+              to: newIndex,
+              entry: entry
+            });
+          }
+        });
+        moves.forEach(function(move) {
+          that[move.to] = move.entry;
+        });
+        angular.forEach(remove,function(rem) {
+          if (rem.$$unwatch) {
+            rem.$$unwatch();
+          }
         });
         that.length = n;
         that.debounceApply();
