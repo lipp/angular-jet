@@ -5,7 +5,7 @@
  *
  * angular-jet 0.0.0
  * https://github.com/lipp/angular-jet/
- * Date: 01/26/2015
+ * Date: 01/28/2015
  * License: MIT
  */
 (function(exports) {
@@ -279,7 +279,7 @@
               entry.$$unwatch();
             }
           }
-          if (angular.isDefined(change.state)) {
+          if (angular.isDefined(change.value)) {
             if (entry.$$saving === 0) {
               entry.$value = change.value;
               entry.$fetchedValue = angular.copy(change.value);

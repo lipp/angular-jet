@@ -260,7 +260,7 @@
               entry.$$unwatch();
             }
           }
-          if (angular.isDefined(change.state)) {
+          if (angular.isDefined(change.value)) {
             if (entry.$$saving === 0) {
               entry.$value = change.value;
               entry.$fetchedValue = angular.copy(change.value);
