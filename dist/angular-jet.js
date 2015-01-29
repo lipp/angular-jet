@@ -5,7 +5,7 @@
  *
  * angular-jet 0.0.0
  * https://github.com/lipp/angular-jet/
- * Date: 01/28/2015
+ * Date: 01/29/2015
  * License: MIT
  */
 (function(exports) {

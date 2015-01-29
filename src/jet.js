@@ -289,10 +289,16 @@
           that[move.to] = move.entry;
         });
         angular.forEach(remove,function(rem) {
+          delete indices[rem.$path];
           if (rem.$$unwatch) {
             rem.$$unwatch();
           }
         });
+        if (that.length > n) {
+          for(var i = n; i < that.length; ++i) {
+            delete indices[that[i].$path];
+          }
+        }
         that.length = n;
         that.debounceApply();
       };
