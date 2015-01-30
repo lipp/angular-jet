@@ -5,7 +5,7 @@
  *
  * angular-jet 0.0.0
  * https://github.com/lipp/angular-jet/
- * Date: 01/29/2015
+ * Date: 01/30/2015
  * License: MIT
  */
 (function(exports) {
@@ -267,7 +267,6 @@
         var moves = [];
         var remove = {};
         changes.forEach(function(change) {
-          var i = change.index - from;
           var isState = angular.isDefined(change.value);
           var entry;
           var oldIndex = indices[change.path];
@@ -308,17 +307,23 @@
           that[move.to] = move.entry;
         });
         angular.forEach(remove,function(rem) {
+          delete indices[rem.$path];
           if (rem.$$unwatch) {
             rem.$$unwatch();
           }
         });
+        if (that.length > n) {
+          for(var i = n; i < that.length; ++i) {
+            delete indices[that[i].$path];
+          }
+        }
         that.length = n;
         that.debounceApply();
       };
       return fetchCb;
     };
 
-    AngularFetcher.prototype.$$createUnsortedFetchCb = function(expr) {
+    AngularFetcher.prototype.$$createUnsortedFetchCb = function() {
       var indices = {};
       var that = this;
       var angularPeer = this.$$getAngularPeer();

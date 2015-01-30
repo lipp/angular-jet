@@ -248,7 +248,6 @@
         var moves = [];
         var remove = {};
         changes.forEach(function(change) {
-          var i = change.index - from;
           var isState = angular.isDefined(change.value);
           var entry;
           var oldIndex = indices[change.path];
@@ -305,7 +304,7 @@
       return fetchCb;
     };
 
-    AngularFetcher.prototype.$$createUnsortedFetchCb = function(expr) {
+    AngularFetcher.prototype.$$createUnsortedFetchCb = function() {
       var indices = {};
       var that = this;
       var angularPeer = this.$$getAngularPeer();
