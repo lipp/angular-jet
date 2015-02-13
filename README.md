@@ -2,6 +2,7 @@
 Angular Binding for [Jet Realtime Bus](http://jetbus.io/).
 
 [![Build Status](https://travis-ci.org/lipp/angular-jet.svg)](https://travis-ci.org/lipp/angular-jet)
+[![Coverage Status](https://coveralls.io/repos/lipp/angular-jet/badge.svg)](https://coveralls.io/r/lipp/angular-jet)
 
 # Example usage
 
