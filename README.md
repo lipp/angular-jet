@@ -1,5 +1,7 @@
 # angular-jet
-Angular Binding for [Jet Realtime Bus](http://jetbus.io/)
+Angular Binding for [Jet Realtime Bus](http://jetbus.io/).
+
+[![Build Status](https://travis-ci.org/lipp/angular-jet.svg)](https://travis-ci.org/lipp/angular-jet)
 
 # Example usage
 
