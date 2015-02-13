@@ -45,13 +45,6 @@ module.exports = function(grunt) {
       }
     },
 
-    bgShell: {
-      jetd: {
-        cmd: 'tests/init_jet.sh',
-        bg: true
-      }
-    },
-
     // Create local server
     connect: {
       testserver: {
@@ -119,6 +112,12 @@ module.exports = function(grunt) {
         configFile: "tests/local_protractor.conf.js"
       },
       singlerun: {},
+      travis: {
+        options: {
+          configFile: "tests/travis_protractor.conf.js"
+        },
+        singlerun: {}
+      },
       saucelabs: {
         options: {
           configFile: "tests/sauce_protractor.conf.js",
@@ -149,8 +148,9 @@ module.exports = function(grunt) {
 
   // Single run tests
   grunt.registerTask('test', ['test:unit', 'test:e2e']);
-  grunt.registerTask('test:unit', ['bgShell:jetd', 'karma:singlerun']);
-  grunt.registerTask('test:e2e', ['bgShell:jetd','concat', 'connect:testserver', 'protractor:singlerun']);
+  grunt.registerTask('test:unit', ['karma:singlerun']);
+  grunt.registerTask('test:e2e', ['concat', 'connect:testserver', 'protractor:singlerun']);
+  grunt.registerTask('test:e2etravis', ['concat', 'connect:testserver', 'protractor:travis']);
   grunt.registerTask('test:manual', ['karma:manual']);
 
   // Travis CI testing
