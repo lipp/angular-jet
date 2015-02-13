@@ -2,7 +2,7 @@
 // http://karma-runner.github.io/0.10/config/configuration-file.html
 
 module.exports = function(config) {
-  config.set({
+  var config = {
     frameworks: ['jasmine'],
     browsers: ['PhantomJS'],
     reporters: ['spec', 'failed', 'coverage'],
@@ -12,6 +12,13 @@ module.exports = function(config) {
     preprocessors: {
       "../src/*.js": "coverage",
       "./fixtures/**/*.json": "html2js"
+    },
+
+    customLaunchers: {
+      Chrome_travis_ci: {
+        base: 'Chrome',
+        flags: ['--no-sandbox']
+      }
     },
 
     coverageReporter: {
@@ -43,5 +50,11 @@ module.exports = function(config) {
       "fixtures/**/*.json",
       'unit/**/*.spec.js'
     ]
-  });
+  };
+
+  if(process.env.TRAVIS){
+    configuration.browsers = ['Chrome_travis_ci'];
+  }
+
+  config.set(config);
 };
