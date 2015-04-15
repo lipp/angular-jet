@@ -34,7 +34,7 @@ module.exports = function(config) {
     files: [
       '../bower_components/angular/angular.js',
       '../bower_components/angular-mocks/angular-mocks.js',
-      '../bower_components/jet/deploy/jet.js',
+      '../bower_components/jet/build/jet.js',
       'lib/**/*.js',
       '../src/module.js',
       '../src/jet.js',

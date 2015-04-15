@@ -1,7 +1,7 @@
 {
   "name": "angular-jet",
   "description": "Angular binding for Jet Realtime Bus.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "authors": [
     "Gerhard Preuss <gelipp@gmail.com> (http://jetbus.io/)"
   ],
@@ -31,7 +31,7 @@
   ],
   "dependencies": {
     "angular": "1.2.x || 1.3.x",
-    "jet": "0.9.x"
+    "jet": "0.2.x"
   },
   "devDependencies": {
     "lodash": "~2.4.1",
